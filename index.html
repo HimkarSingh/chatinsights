@@ -128,8 +128,8 @@
 <body class="h-screen flex flex-col font-sans selection:bg-cat-surface2 selection:text-white">
 
     <!-- Header -->
-    <header class="w-full px-6 py-4 border-b border-cat-surface0 bg-cat-mantle z-20 flex-none">
-        <div class="flex justify-between items-center">
+    <header class="w-full border-b border-cat-surface0 bg-cat-mantle z-20 flex-none">
+        <div class="w-[95%] md:w-[90%] lg:w-[80%] mx-auto py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cat-mauve to-cat-blue flex items-center justify-center text-cat-base font-bold text-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -155,7 +155,8 @@
         
         <!-- Upload Section (Centered) -->
         <div id="upload-section" class="w-full max-w-xl p-6 text-center z-10">
-            <h2 class="text-4xl font-bold mb-4 text-cat-text">Chat<span class="text-cat-mauve">Insights</span></h2>
+            <!-- Updated Title -->
+            <h2 class="text-4xl font-bold mb-4 text-cat-text">Analyze your WhatsApp Chat</h2>
             <p class="text-cat-subtext0 mb-8 text-sm leading-relaxed">Export your chat to .txt (without media) and drop it here.<br>All processing is done locally in your browser.</p>
             
             <div id="drop-zone" class="drop-zone h-56 rounded-3xl flex flex-col items-center justify-center cursor-pointer bg-cat-mantle/50">
@@ -175,7 +176,8 @@
         </div>
 
         <!-- Dashboard Layout (Hidden initially) -->
-        <div id="dashboard-container" class="hidden w-full h-full flex overflow-hidden opacity-0 transition-opacity duration-500">
+        <!-- Updated: Responsive width logic (w-[95%] on mobile -> w-[80%] on large screens) -->
+        <div id="dashboard-container" class="hidden w-[95%] md:w-[90%] lg:w-[80%] h-full flex overflow-hidden opacity-0 transition-opacity duration-500 shadow-2xl border-x border-cat-surface0/50">
             
             <!-- Left Sidebar: Stats (25%) -->
             <aside class="w-1/4 h-full bg-cat-mantle/30 border-r border-cat-surface0 p-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
