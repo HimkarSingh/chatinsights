@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatInsights</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Catppuccin Tailwind Config -->
+    <script>
+        window.tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        colors: {
+                            cat: {
+                                base: '#1e1e2e',
+                                mantle: '#181825',
+                                crust: '#11111b',
+                                text: '#cdd6f4',
+                                subtext1: '#bac2de',
+                                subtext0: '#a6adc8',
+                                surface2: '#585b70',
+                                surface1: '#45475a',
+                                surface0: '#313244',
+                                overlay0: '#6c7086',
+                                blue: '#89b4fa',
+                                lavender: '#b4befe',
+                                sapphire: '#74c7ec',
+                                sky: '#89dceb',
+                                red: '#f38ba8',
+                                maroon: '#eba0ac',
+                                peach: '#fab387',
+                                yellow: '#f9e2af',
+                                green: '#a6e3a1',
+                                teal: '#94e2d5',
+                                mauve: '#cba6f7',
+                                flamingo: '#f2cdcd'
+                            }
+                        },
+                        fontFamily: {
+                            sans: ['Inter', 'sans-serif'],
+                            mono: ['JetBrains Mono', 'monospace'],
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- JSZip for handling zip files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- html2canvas for screenshots -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            overflow: hidden; /* Prevent body scroll for the single-page feel */
+        }
+        /* Custom Scrollbar for internal containers */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #45475a; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #585b70; 
+        }
+        
+        .drop-zone {
+            transition: all 0.3s ease;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='20' ry='20' stroke='%2345475AFF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            background-color: #313244;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='20' ry='20' stroke='%2389B4FAFF' stroke-width='3' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            transform: scale(1.01);
+        }
+
+        .loader {
+            border: 4px solid #313244;
+            border-top: 4px solid #cba6f7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Card Hover Effects */
+        .dashboard-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border-color: #585b70;
+        }
+        
+        /* Modal Transitions */
+        .modal-enter { opacity: 0; transform: scale(0.9); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.9); transition: opacity 300ms, transform 300ms; }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans selection:bg-cat-surface2 selection:text-white">
+
+    <!-- Header -->
+    <header class="w-full px-6 py-4 border-b border-cat-surface0 bg-cat-mantle z-20 flex-none">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cat-mauve to-cat-blue flex items-center justify-center text-cat-base font-bold text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white leading-none">Chat<span class="text-cat-mauve">Insights</span></h1>
+                    <p class="text-[10px] text-cat-subtext0 leading-none mt-0.5">Analyse your chat | Secure</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button id="share-btn" onclick="generateShareCard()" class="hidden text-cat-blue hover:text-cat-sapphire text-xs font-bold transition-colors flex items-center gap-2 bg-cat-surface0 px-3 py-1.5 rounded-lg border border-cat-surface1 hover:border-cat-blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                    Save Card
+                </button>
+                <a href="#" onclick="window.location.reload()" class="text-cat-subtext0 hover:text-cat-mauve text-xs font-medium transition-colors">Reset</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container (Flex Fill) -->
+    <main class="flex-grow relative w-full h-full overflow-hidden flex flex-col items-center justify-center">
+        
+        <!-- Upload Section (Centered) -->
+        <div id="upload-section" class="w-full max-w-xl p-6 text-center z-10">
+            <h2 class="text-4xl font-bold mb-4 text-cat-text">Chat<span class="text-cat-mauve">Insights</span></h2>
+            <p class="text-cat-subtext0 mb-8 text-sm leading-relaxed">Export your chat to .txt (without media) and drop it here.<br>All processing is done locally in your browser.</p>
+            
+            <div id="drop-zone" class="drop-zone h-56 rounded-3xl flex flex-col items-center justify-center cursor-pointer bg-cat-mantle/50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#89b4fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <p class="text-base font-medium text-cat-text mb-2">Drag & Drop .txt or .zip file here</p>
+                <p class="text-xs text-cat-subtext1">or <span class="text-cat-blue hover:underline">browse files</span></p>
+                <input type="file" id="file-input" accept=".txt,.zip" class="hidden">
+            </div>
+            
+            <div id="error-msg" class="hidden mt-4 p-4 rounded-lg bg-cat-red/10 text-cat-red text-xs"></div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-section" class="hidden flex flex-col items-center justify-center z-10">
+            <div class="loader mb-4"></div>
+            <p class="text-cat-subtext0 animate-pulse text-sm">Crunching the numbers...</p>
+        </div>
+
+        <!-- Dashboard Layout (Hidden initially) -->
+        <div id="dashboard-container" class="hidden w-full h-full flex overflow-hidden opacity-0 transition-opacity duration-500">
+            
+            <!-- Left Sidebar: Stats (25%) -->
+            <aside class="w-1/4 h-full bg-cat-mantle/30 border-r border-cat-surface0 p-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+                
+                <!-- Stat Card 1 -->
+                <div class="dashboard-card bg-cat-surface0/40 p-5 rounded-xl border border-cat-surface1 backdrop-blur-sm" onclick="openModal('total')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-1.5 bg-cat-blue/20 rounded-lg text-cat-blue">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        </div>
+                        <span class="text-cat-subtext0 text-xs font-bold uppercase tracking-wider">Messages</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-cat-text" id="stat-total-msgs">0</h3>
+                    <p class="text-[10px] text-cat-subtext1 mt-1 truncate" id="stat-date-range">...</p>
+                </div>
+
+                <!-- Stat Card 2 -->
+                <div class="dashboard-card bg-cat-surface0/40 p-5 rounded-xl border border-cat-surface1 backdrop-blur-sm" onclick="openModal('active')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-1.5 bg-cat-mauve/20 rounded-lg text-cat-mauve">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <span class="text-cat-subtext0 text-xs font-bold uppercase tracking-wider">Most Active</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-cat-text truncate" id="stat-active-user">-</h3>
+                    <p class="text-[10px] text-cat-subtext1 mt-1"><span id="stat-active-count" class="font-mono text-cat-mauve">0</span> msgs</p>
+                </div>
+
+                <!-- Stat Card 3 -->
+                <div class="dashboard-card bg-cat-surface0/40 p-5 rounded-xl border border-cat-surface1 backdrop-blur-sm" onclick="openModal('reply')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-1.5 bg-cat-green/20 rounded-lg text-cat-green">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </div>
+                        <span class="text-cat-subtext0 text-xs font-bold uppercase tracking-wider">Avg Reply</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-cat-text" id="stat-avg-reply">-</h3>
+                    <p class="text-[10px] text-cat-subtext1 mt-1">Click for details</p>
+                </div>
+
+                <!-- Stat Card 4 -->
+                <div class="dashboard-card bg-cat-surface0/40 p-5 rounded-xl border border-cat-surface1 backdrop-blur-sm" onclick="openModal('busy')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-1.5 bg-cat-peach/20 rounded-lg text-cat-peach">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                        </div>
+                        <span class="text-cat-subtext0 text-xs font-bold uppercase tracking-wider">Peak Day</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-cat-text" id="stat-busiest-day">-</h3>
+                    <p class="text-[10px] text-cat-subtext1 mt-1" id="stat-busiest-count">0 msgs</p>
+                </div>
+                
+                <div class="mt-auto text-xs text-cat-subtext0 opacity-50 text-center">
+                    <p>Click cards to expand</p>
+                </div>
+            </aside>
+
+            <!-- Right Area: Graphs (75%) -->
+            <section class="w-3/4 h-full p-4 grid grid-rows-2 grid-cols-2 gap-4">
+                
+                <!-- Top Row: Monthly Timeline -->
+                <div class="col-span-2 bg-cat-surface0/30 p-4 rounded-2xl border border-cat-surface1 dashboard-card flex flex-col relative" onclick="openModal('monthly')">
+                    <h3 class="text-xs font-bold text-cat-subtext0 uppercase mb-2 tracking-wider">Activity Timeline</h3>
+                    <div class="flex-grow relative w-full h-full min-h-0">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    <div class="absolute top-4 right-4 text-cat-surface2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Bottom Left: Hourly Activity -->
+                <div class="bg-cat-surface0/30 p-4 rounded-2xl border border-cat-surface1 dashboard-card flex flex-col relative" onclick="openModal('hourly')">
+                    <h3 class="text-xs font-bold text-cat-subtext0 uppercase mb-2 tracking-wider">Hourly Habits</h3>
+                    <div class="flex-grow relative w-full h-full min-h-0">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                    <div class="absolute top-4 right-4 text-cat-surface2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Bottom Right: User Distribution -->
+                <div class="bg-cat-surface0/30 p-4 rounded-2xl border border-cat-surface1 dashboard-card flex flex-col relative" onclick="openModal('users')">
+                    <h3 class="text-xs font-bold text-cat-subtext0 uppercase mb-2 tracking-wider">Talk Distribution</h3>
+                    <div class="flex-grow relative w-full h-full min-h-0 flex items-center justify-center">
+                        <canvas id="userChart"></canvas>
+                    </div>
+                    <div class="absolute top-4 right-4 text-cat-surface2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="fixed inset-0 z-50 bg-cat-base/95 backdrop-blur-2xl hidden flex items-center justify-center p-4 sm:p-8" onclick="closeModal(event)">
+        <div id="modal-content" class="bg-cat-base border border-cat-surface1 p-6 rounded-2xl w-full max-w-5xl h-[80vh] shadow-2xl relative flex flex-col" onclick="event.stopPropagation()">
+            <button class="absolute top-4 right-4 p-2 bg-cat-surface0 rounded-lg text-cat-text hover:bg-cat-surface1 transition-colors" onclick="closeModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <h2 id="modal-title" class="text-2xl font-bold text-cat-mauve mb-6">Details</h2>
+            
+            <div id="modal-body" class="flex-grow w-full relative overflow-auto custom-scrollbar">
+                <!-- Content injected here -->
+                <canvas id="modal-canvas" class="hidden"></canvas>
+                <div id="modal-text" class="hidden text-cat-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Card Template (Hidden) -->
+    <div id="share-card-template" class="fixed top-0 left-[-9999px] w-[1000px] bg-cat-base p-8 flex flex-col gap-6 border border-cat-surface1 rounded-3xl text-cat-text">
+        <!-- Header -->
+        <div class="flex justify-between items-end border-b border-cat-surface0 pb-6">
+            <div class="flex items-center gap-4">
+                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-cat-mauve to-cat-blue flex items-center justify-center text-cat-base font-bold text-3xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-white">ChatInsights</h1>
+                    <p class="text-cat-subtext0 mt-1 uppercase text-sm tracking-wider">Analyse your chat | Secure</p>
+                </div>
+            </div>
+            <p class="text-xl font-mono text-cat-mauve" id="card-date-range">...</p>
+        </div>
+    
+        <!-- Stats Row -->
+        <div class="grid grid-cols-4 gap-4">
+            <!-- Total -->
+            <!-- Using bg-cat-surface0 (solid color #313244) and solid white text -->
+            <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1 border-l-[6px] border-l-cat-blue">
+                <span class="text-cat-subtext1 text-xs font-bold uppercase tracking-widest block mb-2">Messages</span>
+                <h2 class="text-3xl font-bold text-white pb-1" id="card-total">0</h2>
+            </div>
+            <!-- Active -->
+            <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1 border-l-[6px] border-l-cat-mauve">
+                <span class="text-cat-subtext1 text-xs font-bold uppercase tracking-widest block mb-2">Top Chatter</span>
+                <h2 class="text-xl font-bold text-white truncate pb-1" id="card-active-user">-</h2>
+                <p class="text-cat-mauve mt-1 font-mono text-xs" id="card-active-count">0 msgs</p>
+            </div>
+            <!-- Reply -->
+            <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1 border-l-[6px] border-l-cat-green">
+                <span class="text-cat-subtext1 text-xs font-bold uppercase tracking-widest block mb-2">Avg Speed</span>
+                <h2 class="text-3xl font-bold text-white pb-1" id="card-avg-reply">-</h2>
+            </div>
+            <!-- Peak -->
+            <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1 border-l-[6px] border-l-cat-peach">
+                <span class="text-cat-subtext1 text-xs font-bold uppercase tracking-widest block mb-2">Peak Day</span>
+                <h2 class="text-xl font-bold text-white pb-1" id="card-busy-day">-</h2>
+                <p class="text-cat-peach mt-1 font-mono text-xs" id="card-busy-count">0 msgs</p>
+            </div>
+        </div>
+    
+        <!-- Charts Section -->
+        <div class="space-y-4">
+            <!-- Monthly Chart -->
+            <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1">
+                 <h3 class="text-sm font-bold text-cat-subtext0 uppercase mb-4 tracking-wider">Activity Timeline</h3>
+                 <!-- Image placeholder for chart -->
+                 <img id="card-chart-monthly" class="w-full h-48 object-contain bg-cat-base/20 rounded-lg" />
+            </div>
+            
+            <!-- Bottom Row Charts -->
+            <div class="grid grid-cols-2 gap-4">
+                 <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1">
+                     <h3 class="text-sm font-bold text-cat-subtext0 uppercase mb-4 tracking-wider">Hourly Patterns</h3>
+                     <img id="card-chart-hourly" class="w-full h-48 object-contain bg-cat-base/20 rounded-lg" />
+                 </div>
+                 <div class="bg-cat-surface0 p-6 rounded-2xl border-2 border-cat-surface1 flex flex-col">
+                     <h3 class="text-sm font-bold text-cat-subtext0 uppercase mb-4 tracking-wider">User Distribution</h3>
+                     <div class="flex-grow flex items-center justify-center">
+                        <img id="card-chart-user" class="h-48 object-contain" />
+                     </div>
+                 </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center pt-4 mt-2 border-t border-cat-surface0">
+            <p class="text-cat-subtext0 text-base font-bold tracking-widest">ChatInsights</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Theme Colors ---
+        const colors = {
+            blue: '#89b4fa',
+            mauve: '#cba6f7',
+            peach: '#fab387',
+            green: '#a6e3a1',
+            red: '#f38ba8',
+            text: '#cdd6f4',
+            surface1: '#45475a',
+            grid: '#313244',
+            base: '#1e1e2e'
+        };
+
+        let globalStats = null;
+        let chartInstances = {}; // Store small chart instances
+        let modalChartInstance = null; // Store modal chart instance
+
+        // --- DOM Elements ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadSection = document.getElementById('upload-section');
+        const loadingSection = document.getElementById('loading-section');
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const errorMsg = document.getElementById('error-msg');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const shareBtn = document.getElementById('share-btn');
+
+        // --- Event Listeners for Upload ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        function handleFile(file) {
+            if (!file) return;
+
+            const isTxt = file.name.endsWith('.txt') || file.type === "text/plain";
+            const isZip = file.name.endsWith('.zip') || file.type.includes("zip");
+
+            if (!isTxt && !isZip) {
+                showError("Please upload a valid .txt or .zip file exported from WhatsApp.");
+                return;
+            }
+
+            uploadSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+
+            if (isTxt) {
+                const reader = new FileReader();
+                reader.onload = (e) => processText(e.target.result);
+                reader.readAsText(file);
+            } else if (isZip) {
+                // Use JSZip to read the zip content
+                JSZip.loadAsync(file).then(function(zip) {
+                    // Find the first .txt file that isn't Mac metadata
+                    const txtFileName = Object.keys(zip.files).find(name => name.endsWith('.txt') && !name.startsWith('__MACOSX'));
+                    
+                    if (txtFileName) {
+                        zip.files[txtFileName].async("string").then(function (text) {
+                            processText(text);
+                        });
+                    } else {
+                        handleError(new Error("No .txt file found inside the ZIP archive."));
+                    }
+                }).catch(function(err) {
+                    handleError(err);
+                });
+            }
+        }
+
+        function processText(rawText) {
+            setTimeout(() => { 
+                try {
+                    const data = parseChat(rawText);
+                    if (data.messages.length === 0) {
+                        throw new Error("No messages found. Check file format.");
+                    }
+                    globalStats = analyzeData(data.messages);
+                    renderDashboard();
+                    loadingSection.classList.add('hidden');
+                    dashboardContainer.classList.remove('hidden');
+                    shareBtn.classList.remove('hidden'); // Show share button
+                    setTimeout(() => dashboardContainer.classList.remove('opacity-0'), 50); // Fade in
+                } catch (err) {
+                    handleError(err);
+                }
+            }, 100);
+        }
+
+        function handleError(err) {
+            loadingSection.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+            showError(err.message || "Error parsing file.");
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hidden');
+        }
+
+        // --- Parsing Logic (Improved for robustness) ---
+        function parseChat(text) {
+            const lines = text.split('\n');
+            const messages = [];
+            const regex = /^\[?(\d{1,4}[-/\.]\d{1,2}[-/\.]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:[\s\u202F]+[APap][Mm])?)\]?(?: -|\s-)?\s+([^:]+): (.+)/;
+            
+            lines.forEach(line => {
+                line = line.replace(/[\u200e\u200f]/g, "").trim(); 
+                if (!line) return;
+
+                const match = line.match(regex);
+                if (match) {
+                    const timestampStr = match[1];
+                    const author = match[2];
+                    const content = match[3];
+                    let cleanTime = timestampStr.replace(/[\[\]]/g, '').replace(/[\u202F]/g, ' ');
+                    let date = new Date(cleanTime);
+                    
+                    if (isNaN(date.getTime())) {
+                        const parts = cleanTime.match(/(\d+)[-/\.](\d+)[-/\.](\d+)(.*)/);
+                        if (parts) {
+                             if (parts[1].length === 4) {
+                                date = new Date(`${parts[1]}-${parts[2]}-${parts[3]} ${parts[4]}`);
+                             } else {
+                                 date = new Date(`${parts[2]}/${parts[1]}/${parts[3]} ${parts[4]}`);
+                             }
+                        }
+                    }
+
+                    if (!isNaN(date.getTime())) {
+                        messages.push({ date, author, content });
+                    }
+                } else {
+                    if (messages.length > 0 && !/^\d{1,4}[-/\.]/.test(line)) {
+                        messages[messages.length - 1].content += "\n" + line;
+                    }
+                }
+            });
+            return { messages };
+        }
+
+        function analyzeData(messages) {
+            const userStats = {};
+            const hours = new Array(24).fill(0);
+            const months = {}; 
+            let maxDaily = 0;
+            let busiestDay = null;
+            const dailyCounts = {};
+            const responseTimes = {}; 
+
+            for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
+                const author = msg.author;
+                const date = msg.date;
+
+                if (!userStats[author]) userStats[author] = { count: 0, words: 0 };
+                userStats[author].count++;
+                
+                hours[date.getHours()]++;
+
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                months[monthKey] = (months[monthKey] || 0) + 1;
+
+                const dayKey = date.toISOString().split('T')[0];
+                dailyCounts[dayKey] = (dailyCounts[dayKey] || 0) + 1;
+                if (dailyCounts[dayKey] > maxDaily) {
+                    maxDaily = dailyCounts[dayKey];
+                    busiestDay = dayKey;
+                }
+
+                if (i > 0) {
+                    const prevMsg = messages[i-1];
+                    if (prevMsg.author !== author) {
+                        const diffMs = date - prevMsg.date;
+                        if (diffMs < 6 * 60 * 60 * 1000) {
+                            if (!responseTimes[author]) responseTimes[author] = [];
+                            responseTimes[author].push(diffMs);
+                        }
+                    }
+                }
+            }
+
+            // Calculate Avg Response for Table
+            const avgRepliesByUser = [];
+            for (const [user, times] of Object.entries(responseTimes)) {
+                if (times.length > 0) {
+                    const sum = times.reduce((a, b) => a + b, 0);
+                    avgRepliesByUser.push({ user, avg: sum / times.length, count: times.length });
+                }
+            }
+            avgRepliesByUser.sort((a, b) => a.avg - b.avg);
+
+            return {
+                userStats,
+                hours,
+                months,
+                busiestDay,
+                maxDaily,
+                responseTimes,
+                avgRepliesByUser,
+                total: messages.length,
+                dateRange: messages.length ? `${messages[0].date.toLocaleDateString()} - ${messages[messages.length-1].date.toLocaleDateString()}` : ""
+            };
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}h ${minutes % 60}m`;
+        }
+
+        // --- Rendering ---
+        Chart.defaults.color = colors.text;
+        Chart.defaults.borderColor = colors.grid;
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        function renderDashboard() {
+            // Stats
+            document.getElementById('stat-total-msgs').innerText = globalStats.total.toLocaleString();
+            document.getElementById('stat-date-range').innerText = globalStats.dateRange;
+            
+            let maxUser = "", maxCount = 0;
+            for (const [user, data] of Object.entries(globalStats.userStats)) {
+                if (data.count > maxCount) { maxCount = data.count; maxUser = user; }
+            }
+            document.getElementById('stat-active-user').innerText = maxUser;
+            document.getElementById('stat-active-count').innerText = maxCount.toLocaleString();
+
+            const globalAvg = globalStats.avgRepliesByUser.length > 0 
+                ? globalStats.avgRepliesByUser.reduce((a,b)=>a+b.avg,0) / globalStats.avgRepliesByUser.length 
+                : 0;
+            document.getElementById('stat-avg-reply').innerText = formatDuration(globalAvg);
+
+            if (globalStats.busiestDay) {
+                const dateObj = new Date(globalStats.busiestDay);
+                document.getElementById('stat-busiest-day').innerText = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+                document.getElementById('stat-busiest-count').innerText = `${globalStats.maxDaily} msgs`;
+            }
+
+            // --- Charts (Small Versions) ---
+            
+            // 1. Monthly (Line)
+            const mKeys = Object.keys(globalStats.months).sort();
+            chartInstances.monthly = new Chart(document.getElementById('monthlyChart'), {
+                type: 'line',
+                data: {
+                    labels: mKeys,
+                    datasets: [{
+                        label: 'Messages',
+                        data: mKeys.map(k => globalStats.months[k]),
+                        borderColor: colors.green,
+                        backgroundColor: 'rgba(166, 227, 161, 0.1)',
+                        fill: true, tension: 0.4, pointRadius: 2
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        x: { display: true, grid: { display: false }, ticks: { color: colors.subtext1, font: { size: 10 }, maxRotation: 0, autoSkip: true } }, 
+                        y: { display: true, grid: { color: colors.surface1 }, ticks: { color: colors.subtext1, font: { size: 10 } } } 
+                    } 
+                }
+            });
+
+            // 2. Hourly (Bar)
+            chartInstances.hourly = new Chart(document.getElementById('hourlyChart'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i),
+                    datasets: [{
+                        label: 'Messages', data: globalStats.hours,
+                        backgroundColor: colors.blue, borderRadius: 4
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        x: { display: true, grid: { display: false }, ticks: { color: colors.subtext1, font: { size: 10 } } }, 
+                        y: { display: true, grid: { color: colors.surface1 }, ticks: { color: colors.subtext1, font: { size: 10 } } } 
+                    } 
+                }
+            });
+
+            // 3. User (Doughnut)
+            const uLabels = Object.keys(globalStats.userStats);
+            chartInstances.user = new Chart(document.getElementById('userChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: uLabels,
+                    datasets: [{
+                        data: uLabels.map(u => globalStats.userStats[u].count),
+                        backgroundColor: [colors.mauve, colors.blue, colors.green, colors.peach, colors.red],
+                        borderColor: colors.base, borderWidth: 2
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '60%', 
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'right',
+                            labels: { color: colors.text, boxWidth: 10, font: { size: 10 } }
+                        } 
+                    } 
+                }
+            });
+        }
+
+        // --- Card Generation Logic ---
+        function generateShareCard() {
+            if (!globalStats) return;
+
+            // 1. Populate Text Data
+            document.getElementById('card-date-range').innerText = globalStats.dateRange;
+            document.getElementById('card-total').innerText = globalStats.total.toLocaleString();
+            
+            let maxUser = "", maxCount = 0;
+            for (const [user, data] of Object.entries(globalStats.userStats)) {
+                if (data.count > maxCount) { maxCount = data.count; maxUser = user; }
+            }
+            document.getElementById('card-active-user').innerText = maxUser;
+            document.getElementById('card-active-count').innerText = `${maxCount.toLocaleString()} messages`;
+
+            const globalAvg = globalStats.avgRepliesByUser.length > 0 
+                ? globalStats.avgRepliesByUser.reduce((a,b)=>a+b.avg,0) / globalStats.avgRepliesByUser.length 
+                : 0;
+            document.getElementById('card-avg-reply').innerText = formatDuration(globalAvg);
+
+            if (globalStats.busiestDay) {
+                const dateObj = new Date(globalStats.busiestDay);
+                document.getElementById('card-busy-day').innerText = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+                document.getElementById('card-busy-count').innerText = `${globalStats.maxDaily} msgs`;
+            }
+
+            // 2. Capture Charts as Images
+            // Chart.js provides .toBase64Image() method
+            if (chartInstances.monthly) {
+                document.getElementById('card-chart-monthly').src = chartInstances.monthly.toBase64Image();
+            }
+            if (chartInstances.hourly) {
+                document.getElementById('card-chart-hourly').src = chartInstances.hourly.toBase64Image();
+            }
+            if (chartInstances.user) {
+                document.getElementById('card-chart-user').src = chartInstances.user.toBase64Image();
+            }
+
+            // 3. Render Card
+            const cardElement = document.getElementById('share-card-template');
+            
+            html2canvas(cardElement, {
+                backgroundColor: '#1e1e2e', // Force Catppuccin Base background
+                scale: 2, // High resolution
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'ChatInsights-Report.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error("Capture failed:", err);
+                alert("Could not generate image. Please try again.");
+            });
+        }
+
+        // --- Modal Logic ---
+        function openModal(type) {
+            modalOverlay.classList.remove('hidden');
+            const titleEl = document.getElementById('modal-title');
+            const canvasEl = document.getElementById('modal-canvas');
+            const textEl = document.getElementById('modal-text');
+
+            // Reset
+            canvasEl.classList.add('hidden');
+            textEl.classList.add('hidden');
+            if(modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+
+            if (type === 'monthly') {
+                titleEl.innerText = "Monthly Activity Timeline";
+                canvasEl.classList.remove('hidden');
+                const mKeys = Object.keys(globalStats.months).sort();
+                modalChartInstance = new Chart(canvasEl, {
+                    type: 'line',
+                    data: {
+                        labels: mKeys,
+                        datasets: [{
+                            label: 'Messages', data: mKeys.map(k => globalStats.months[k]),
+                            borderColor: colors.green, backgroundColor: 'rgba(166, 227, 161, 0.2)',
+                            fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: colors.base, pointBorderColor: colors.green, pointBorderWidth: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: colors.grid } } } }
+                });
+            } else if (type === 'hourly') {
+                titleEl.innerText = "Hourly Activity Patterns";
+                canvasEl.classList.remove('hidden');
+                modalChartInstance = new Chart(canvasEl, {
+                    type: 'bar',
+                    data: {
+                        labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                        datasets: [{
+                            label: 'Messages', data: globalStats.hours,
+                            backgroundColor: colors.blue, borderRadius: 6,
+                            hoverBackgroundColor: colors.mauve
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: colors.grid } } } }
+                });
+            } else if (type === 'users') {
+                titleEl.innerText = "Message Distribution by User";
+                canvasEl.classList.remove('hidden');
+                const uLabels = Object.keys(globalStats.userStats);
+                modalChartInstance = new Chart(canvasEl, {
+                    type: 'doughnut',
+                    data: {
+                        labels: uLabels,
+                        datasets: [{
+                            data: uLabels.map(u => globalStats.userStats[u].count),
+                            backgroundColor: [colors.mauve, colors.blue, colors.green, colors.peach, colors.red],
+                            borderColor: colors.base, borderWidth: 4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: colors.text, padding: 20 } } } }
+                });
+            } else if (type === 'reply') {
+                titleEl.innerText = "Response Time Analysis";
+                textEl.classList.remove('hidden');
+                let html = `
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-cat-subtext0 border-b border-cat-surface1">
+                            <tr>
+                                <th class="p-4">User</th>
+                                <th class="p-4">Avg Response</th>
+                                <th class="p-4">Replies Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-cat-surface1">`;
+                
+                globalStats.avgRepliesByUser.forEach(u => {
+                    html += `
+                        <tr class="hover:bg-cat-surface0/50 transition-colors">
+                            <td class="p-4 font-medium text-cat-text">${u.user}</td>
+                            <td class="p-4 font-mono text-cat-mauve">${formatDuration(u.avg)}</td>
+                            <td class="p-4 text-cat-subtext1">${u.count}</td>
+                        </tr>`;
+                });
+                html += `</tbody></table>`;
+                textEl.innerHTML = html;
+            } else if (type === 'total') {
+                titleEl.innerText = "Total Messages Info";
+                textEl.classList.remove('hidden');
+                textEl.innerHTML = `
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="bg-cat-surface0 p-6 rounded-xl">
+                            <h4 class="text-cat-subtext0 text-sm uppercase">Total Count</h4>
+                            <p class="text-4xl font-bold text-cat-blue mt-2">${globalStats.total.toLocaleString()}</p>
+                        </div>
+                        <div class="bg-cat-surface0 p-6 rounded-xl">
+                            <h4 class="text-cat-subtext0 text-sm uppercase">Date Range</h4>
+                            <p class="text-xl font-bold text-cat-text mt-2">${globalStats.dateRange}</p>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'active' || type === 'busy') {
+                // Generic logic for other stats if needed, or just show text
+                titleEl.innerText = "Detailed Statistics";
+                textEl.classList.remove('hidden');
+                textEl.innerHTML = `<p>More detailed breakdown coming soon!</p>`;
+            }
+        }
+
+        function closeModal(e) {
+            if (e && e.target !== modalOverlay && !e.target.closest('button')) return;
+            modalOverlay.classList.add('hidden');
+            if(modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+        }
+    </script>
+</body>
+</html>
